@@ -3,8 +3,6 @@
 
 Controls - 
 
-    Move the mouse to move the light
-
     Click & Drag the mouse to move the camera
     
     '9' & '0' keys to change the light's strength (- & +)
@@ -13,4 +11,8 @@ Controls -
     
     'Up Arrow' & 'Down Arrow' to change the lightmap resolution value.
     
-    Values might need fiddling for specific resolutions.
+    'R' will toggle ray paths
+    
+    'Esc' to quit
+    
+    Values might need fiddling for specific resolutions, but generally will scale properly.
