@@ -1,5 +1,5 @@
 # Pixie-Dust - 2D Lighting System
-0.1 version
+0.11 version
 
 Controls - 
 
