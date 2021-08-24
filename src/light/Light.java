@@ -35,6 +35,12 @@ public class Light extends PointSource{
 		
 	}
 	
+	public void setColor(Color c) {
+		this.red = c.getRed();
+		this.green = c.getGreen();
+		this.blue = c.getBlue();
+	}
+	
 	public int compareTo(Light other) {
 
 		return this.getTag().compareTo(other.getTag());
@@ -114,6 +120,9 @@ public class Light extends PointSource{
 			@Override
 			public void run() {
 
+				if(owner!=null && owner.getOwner()!=null && !owner.getOwner().isThreadReady()) {
+					return;
+				}
 				if (l.isCycle()) {
 
 					l.setSaturation(l.getSaturation() - rate);

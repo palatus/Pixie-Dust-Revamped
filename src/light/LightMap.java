@@ -18,7 +18,6 @@ public class LightMap {
 	private ArrayList<Light> lights = new ArrayList<Light>();
 	private Window owner;
 	private float wallCoverage = 0.6f;
-	private ArrayList<Thread> updaters = new ArrayList<Thread>(); // threads to keep pixel color calculated
 	private boolean updateReady = false;
 	private Timer runner = new Timer();
 	private int threadFinishCount = 0;
@@ -37,8 +36,7 @@ public class LightMap {
 	public void recreate(Dimension di, double psize) { // method to return a standard LightMap based on 2 parameters.
 		
 		this.litPixels = new ArrayList<Pixel>();
-		
-		LightMap l = this;
+
 		double scale = psize; // size of each pixel
 		
 		Dimension d = new Dimension((int)(di.getWidth() * 1/psize), (int)(di.getHeight() * 1/psize));
@@ -50,7 +48,7 @@ public class LightMap {
 				Pixel p = new Pixel(new Point((int)(i*scale),(int)(j*scale)));
 				p.setSizeSquared(scale);
 				p.setOwner(this);
-				l.litPixels.add(p);
+				litPixels.add(p);
 				
 			}
 			
@@ -122,7 +120,7 @@ public class LightMap {
 		l.setDistance(Math.pow(d.getWidth(),2));
 		l.setTag("Sun");
 		
-		l.cycleB(0.00002f, 30, 0.1f, 0.3f);
+		l.cycleB(0.00002f, 30, 0.15f, 0.3f);
 		l.setIgnoreObjects(true);
 		
 		addLight(l);
@@ -169,17 +167,6 @@ public class LightMap {
 		
 		l.setOwner(this);
 		this.getLights().add(l);
-		
-	}
-	
-	public void updatePixels(Graphics2D g) { // update each pixel's render values - deprecated Now handled in threads
-		
-//		for(int i = 0; i<litPixels.size(); i++) {
-//			
-//			Pixel p = litPixels.get(i);
-//			p.calculateColor(lights, this.getOwner().getScene().getSceneObjects() ,g);
-//			
-//		}
 		
 	}
 	
@@ -252,14 +239,6 @@ public class LightMap {
 
 	public void setWallCoverage(float wallCoverage) {
 		this.wallCoverage = wallCoverage;
-	}
-	
-	public ArrayList<Thread> getUpdaters() {
-		return updaters;
-	}
-
-	public void setUpdaters(ArrayList<Thread> updaters) {
-		this.updaters = updaters;
 	}
 
 	public boolean isUpdateReady() {
@@ -334,8 +313,19 @@ public class LightMap {
 
 	}
 
+	public Light getFirstLightWithTag(String tag){
 
-	public boolean isShowRays() {
+		for (Light l: this.getLights()) {
+			if(l.getTag().equalsIgnoreCase(tag)){
+				return l;
+			}
+		}
+
+		return null;
+
+	}
+
+	public boolean showingRays() {
 		return showRays;
 	}
 

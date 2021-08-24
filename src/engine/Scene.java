@@ -11,7 +11,8 @@ public class Scene {
 	private Window owner;
 	private Point objectSortReference;
 	
-	public Scene() { // Keeps track of a full scene (one display on the stage) through its GraphicalObject data
+	// Keeps track of a full scene (one display on the stage) through its GraphicalObject data
+	public Scene() { 
 		
 	}
 	
@@ -19,7 +20,8 @@ public class Scene {
 		this.getSceneObjects().getContents().sort(new Comparators.shadowCastComparator());
 	}
 	
-	public void pushSceneObject(GraphicalObject g) { // essential for maintaining lightmap accuracy
+	// essential for maintaining lightmap accuracy
+	public void pushSceneObject(GraphicalObject g) { 
 		this.getSceneObjects().addItem(g);
 		this.sortObjectsByShadow();
 	}

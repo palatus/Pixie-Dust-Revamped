@@ -1,10 +1,9 @@
 package engine;
 
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
+import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.Timer;
 
 import javax.swing.ImageIcon;
@@ -15,9 +14,10 @@ import light.Light;
 import light.LightMap;
 import light.Particle;
 import light.Pixel;
+import light.Threads;
 
 @SuppressWarnings("serial")
-public class Window extends JComponent implements KeyListener, MouseListener{
+public class Window extends JComponent implements KeyListener, MouseListener, MouseWheelListener{
 
 	private JFrame stage; 
 	private Dimension dimension;
@@ -25,24 +25,37 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 	private Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	private String backgroundURL = "";
 	private Color bcolor = Color.GRAY;
-	private boolean debug = true, moveUp, moveDown, moveLeft, moveRight, dragging = false;
+	private boolean debug = true, moveUp, moveDown, moveLeft, moveRight, dragging = false, threadsDeployed = false, threadReady = false;
 	private double resolutionScale = 32, graphicsScale = 2;
 	private int shiftX = 0, shiftY = 0;
 	private int midShiftX = 0, midShiftY = 0;
 	private int apparentMouseX = 0, apparentMouseY = 0;
+	private Threads.LightmapThread[] threads;
+	private boolean useThreads = false;
+	
+	// Current multithreading core allocation 
+	private int cores;
+	
 	double hdRatio = 1;
 
 	private Point lastDrag;
 	
 	private Timer controller = new Timer();
 	
-	private GraphicalObject focusObject = new GraphicalObject(-1); // game object to follow
+	// Camera Point Object
+	private GraphicalObject focusObject = new GraphicalObject(-1);
 
-	private Scene scene = new Scene(this); // current displayed scene
+	// FPS Thread 
+	private Threads.FPSCounter fpsCounter;
+	private double fps;
 	
-	public Window(String n) { // initialize window. initialize the JFrame object that Window, a child of JComponent, is a component of.
+	// current displayed scene
+	private Scene scene = new Scene(this); 
+	
+	// initialize window. initialize the JFrame object that Window, a child of JComponent, is a component of.
+	public Window(String n) {
 		
-		
+		fpsCounter = new Threads.FPSCounter();
 		this.setTitle(n);
 		JFrame f = new JFrame();
 		f.setTitle(n);
@@ -54,6 +67,7 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		this.setStage(f);
 		this.addKeyListener(this);
 		this.addMouseListener(this);
+		this.addMouseWheelListener(this);
 		this.repaint();
 		this.revalidate();
 		this.setLayout(null);
@@ -66,7 +80,8 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		
 		Dimension s = new Dimension((int)(screenSize.width/graphicsScale), (int)(screenSize.height/graphicsScale));
 		
-		this.getScene().setLightmap(LightMap.create(s, resolutionScale/graphicsScale , this)); // generate a Light Map (dimension d, pixelSizeSquared p)
+		// generate a Light Map (dimension d, pixelSizeSquared p)
+		this.getScene().setLightmap(LightMap.create(s, resolutionScale/graphicsScale , this)); 
 		
 		focusObject.setX(481);
 		focusObject.setY(276);
@@ -76,28 +91,6 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 
 		this.getScene().getSceneObjects().getContents().add(focusObject);
 		
-//		controller.schedule(new TimerTask() {
-//
-//			@Override
-//			public void run() {
-//				
-//				if(moveUp) {
-//					getFocusObject().shift(0, -4); // UP
-//				}
-//				if(moveDown) {
-//					getFocusObject().shift(0, 4); // DOWN
-//				}
-//				if(moveLeft) {
-//					getFocusObject().shift(-4, 0); // LEFT
-//				}
-//				if(moveRight) {
-//					getFocusObject().shift(4, 0); // RIGHT
-//				}
-//				
-//			}
-//			
-//		}, 0, 10);
-		
 		graphicsScale = resolutionGraphicsScale();
 		
 	}
@@ -106,11 +99,14 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		
 		double rs = 32;
 		
-		double ratio = 1; // default shading resolution for a LightMap is 6 based on a 1080p resolution
-													  // Create a ratio based on detected screen size and apply it to rs.
+		// default shading resolution for a LightMap is 6 based on a 1080p resolution
+		double ratio = 1; 
+		
+		// Create a ratio based on detected screen size and apply it to rs.								  
 		hdRatio = ratio;
 		
-		return Math.ceil(rs * ratio); // try to avoid strange aspect ratio interference
+		// try to avoid strange aspect ratio interference
+		return Math.ceil(rs * ratio); 
 		
 	}
 	
@@ -118,17 +114,21 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		
 		double rs = 2;
 		
-		double ratio = 1; // default shading resolution for a LightMap is 6 based on a 1080p resolution
-													  // Create a ratio based on detected screen size and apply it to rs.
-		return Math.ceil(rs * ratio); // try to avoid strange aspect ratio interference
+		// default shading resolution for a LightMap is 6 based on a 1080p resolution
+		double ratio = 1; 
+		
+		// Create a ratio based on detected screen size and apply it to rs.		
+		// try to avoid strange aspect ratio interference
+		return Math.ceil(rs * ratio); 
 		
 	}
 	
 	public Window() {
 		this("Stage Name");
 	}
-	
-	public void paintComponent(Graphics g) { // Graphics draw method
+
+	// Graphics draw method
+	public void paintComponent(Graphics g) {
 
 		GraphicalObject cameraObj = focusObject;
 		Point camera = cameraObj.getLocation();
@@ -136,20 +136,29 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		Graphics2D g2 = (Graphics2D)g.create();
 		g2.scale(this.getGraphicsScale(), this.getGraphicsScale());
 
-		int midX = (int) (this.getScreenSize().width/(2*graphicsScale)); // Confusing math warning (!)
+		// Confusing math warning (!)
+		int midX = (int) (this.getScreenSize().width/(2*graphicsScale));
 		int midY = (int) (this.getScreenSize().height/(2*graphicsScale));
 
-		midX = (int) ((resolutionScale()/graphicsScale)*(Math.round(midX/(resolutionScale()/graphicsScale)))); // get rounded mid screen for graphics transformations
+		// get rounded mid screen for graphics transformations
+		midX = (int) ((resolutionScale()/graphicsScale)*(Math.round(midX/(resolutionScale()/graphicsScale))));
 		midY = (int) ((resolutionScale()/graphicsScale)*(Math.round(midY/(resolutionScale()/graphicsScale))));
+
+		// Sets values for static window shift coordinates
+		// Should represent the center of each frame
 		midShiftX = midX;
 		midShiftY = midY;
-		
-		int shiftNumX = (int) ((resolutionScale()/graphicsScale)*(Math.round(camera.getX()/(resolutionScale()/graphicsScale))) - midX); // Get rounded shift coordinates of screen for graphics transformations
+
+		// Get rounded shift coordinates of screen for graphics transformations
+		int shiftNumX = (int) ((resolutionScale()/graphicsScale)*(Math.round(camera.getX()/(resolutionScale()/graphicsScale))) - midX);
 		int shiftNumY = (int) ((resolutionScale()/graphicsScale)*(Math.round(camera.getY()/(resolutionScale()/graphicsScale))) - midY);
 
-		shiftGraphics(g2, -shiftNumX, -shiftNumY); // offset coordinates
-		
-		bcolor = Color.white; // END CONFUSING MATH
+		// offset coordinates
+		shiftGraphics(g2, -shiftNumX, -shiftNumY);
+
+		// END CONFUSING MATH
+
+		bcolor = Color.white;
 		drawBackgound(g2);
 		drawScene(g2);
 
@@ -162,10 +171,20 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		
 		g2.scale(1/this.getGraphicsScale(), 1/this.getGraphicsScale());
 		drawDebugStuff(g2);
+		drawQuickStats(g2);
 
 		if(dragging)
 			calcDrag();
 
+		fps = fpsCounter.fps();
+		fpsCounter.interrupt();
+		if(!fpsCounter.isAlive()) {
+			
+			//fpsCounter = new Threads.FPSCounter();
+			fpsCounter.start();
+			
+		}
+		
 		super.repaint();
 		
 	}
@@ -203,19 +222,99 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		}
 		
 	}
+
+	public void allocateThreads(Graphics2D g){
+		allocateThreads(g,false);
+	}
 	
-	public void drawLightMap(Graphics2D g) {
+	public void allocateThreads(Graphics2D g, boolean verbose){
 
-		if (this.getLightmap() != null) {
+		stopThreads();
+		
+		cores = Runtime.getRuntime().availableProcessors();
+		threads = new Threads.LightmapThread[cores];
+
+		LightMap l = getLightmap();
+		p("Using "+cores +" cores for computations! "+l.getLitPixels().size()+" to allocate",verbose);
+		Pixel[] pixels = l.getLitPixels().toArray(new Pixel[l.getLitPixels().size()]);
+		int step = l.getLitPixels().size()/cores;
+
+		for(int i = 0; i<cores;i++){
+
+			Pixel[] jobGroup = null;
 			
-			this.getLightmap().setUpdateReady(true);
-			for (int i = 0; i < this.getLightmap().getLitPixels().size(); i++) {
+			if(i==cores) {
+				
+				jobGroup = Arrays.copyOfRange(pixels, step*i, pixels.length);
+				
+			} else {
+				
+				jobGroup = Arrays.copyOfRange(pixels, step*i, step*i+step);
+				
+			}
+			
+			
+			Threads.LightmapThread lmThread = new Threads.LightmapThread(l, jobGroup ,g);
+			threads[i] = lmThread;
+			p("Thread "+i+" allocated ("+(step*i)+" to "+(step*i+step)+")",verbose);
 
-				Pixel p = this.getLightmap().getLitPixels().get(i);
+		}
+
+		threadsDeployed = true;
+
+	}
+	
+	public void stopThreads() {
+		if(threads != null)
+			for(Threads.LightmapThread t : threads){
+				t.interrupt();
+			}
+	}
+
+	 public void drawLightMap(Graphics2D g) {
+		 
+		if (this.getLightmap() != null) {
+
+			this.getLightmap().setUpdateReady(true);
+			if(!threadReady || !useThreads) {
 				
-				p.calculateColor(this.getScene().getLightmap().getLights(), this.getScene().getSceneObjects().getContents() ,g);
+				for (int i = 0; i < this.getLightmap().getLitPixels().size(); i++) {
+					Pixel p = this.getLightmap().getLitPixels().get(i);
+					p.calculateColor(this.getScene().getLightmap().getLights(), this.getScene().getSceneObjects().getContents(), g);
+					drawPixel(g, p);
+
+					if(useThreads)
+						threadReady = true;
+				}
 				
-				drawPixel(g, p);
+			} else if(useThreads){
+				if (!threadsDeployed && threadReady) {
+
+					allocateThreads(g);
+
+				} else if (threadReady && threads != null) {
+
+					allocateThreads(g);
+					for (Threads.LightmapThread t : threads) {
+						
+						t.start();
+						
+					}
+					
+					for (Threads.LightmapThread t : threads) {
+						
+						try {
+							
+							t.join();
+							
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						
+					}
+					
+				}
 				
 			}
 
@@ -226,7 +325,20 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		}
 
 	}
-	
+
+	public void drawQuickStats(Graphics2D g) {
+
+		if(this.getLightmap() != null)
+			g.drawString("Light Power: "+this.getLightmap().getFirstLightWithTag("mouselight").getDistance(), 32, screenSize.height - 28);
+		if(this.useThreads) {
+			Color tmp = g.getColor();
+			g.setColor(Color.yellow);
+			g.drawString("Using Cores: "+this.cores+" active threads", 32, screenSize.height - 44);
+			g.setColor(tmp);
+		}
+
+	}
+
 	public void drawDebugStuff(Graphics2D g) {
 		
 		if(this.debug) {
@@ -234,31 +346,34 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 			g.setColor(Color.GREEN.brighter());
 			g.drawString("Resolution: "+this.getResolutionScale(), 32, 32);
 			g.drawString("Graphics Scale: "+this.getGraphicsScale(), 32, 48);
-			g.drawString("Shift Coordinates: ("+this.getFocusObject().getLocation()+")", 32, 64);
+			g.drawString("Shift Coordinates: ("+this.getFocusObject().getLocation().x+","+this.getFocusObject().getLocation().y+")", 32, 64);
+			g.drawString("FPS: "+new DecimalFormat("#").format(fps), 32, 80);
 			if(dragging){
-				g.drawString("Dragging", 32, 80);
+				g.drawString("Dragging", 32, 98);
 			}
 			
 		}
 		
 	}
 	
-	public void drawPixel(Graphics2D g, Pixel p) {
+	public synchronized void drawPixel(Graphics2D g, Pixel p) {
 		
 		Color old = g.getColor();
 		
 		g.setColor(p.getRenderColor());
 		
 		g.fillRect(p.getRealLocation().x, p.getRealLocation().y, (int)p.getWidthPrecise(), (int)p.getHeightPrecise());
-		
+
 		g.setColor(old);
 		
 	}
-	
-	public void drawScene(Graphics2D g) { // The list of objects should be painted in reverse so that shadow casting objects are drawn on top
-										  // This order must be maintained because of the shading algorithm - Shadow casters come first, in order
-										  // for shadows to appear correctly on non-shadow casting objects.
-		
+
+	/*  The list of objects should be painted in reverse so that shadow casting objects are drawn on top
+		This order must be maintained because of the shading algorithm - Shadow casters come first, in order
+		for shadows to appear correctly on non-shadow casting objects.
+	 */
+	public void drawScene(Graphics2D g) {
+
 		for(int i = this.getScene().getSceneObjects().getContents().size()-1; i>=0; i--) { // draw backwards
 			
 			GraphicalObject obj = this.getScene().getSceneObjects().getContents().get(i);
@@ -288,7 +403,8 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		
 		Dimension s = new Dimension((int)(screenSize.width/graphicsScale), (int)(screenSize.height/graphicsScale));
 		this.getLightmap().recreate(s, this.getResolutionScale()/graphicsScale);
-		
+		threadsDeployed = false;
+
 	}
 
 	public void drawBackgound(Graphics2D g) {
@@ -323,7 +439,12 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		case 83:
 			moveDown = true;
 			break;
-			
+		case KeyEvent.VK_F:
+			this.useThreads = !this.useThreads;
+			break;
+		case KeyEvent.VK_L:
+			this.getLightmap().getFirstLightWithTag("mouselight").setColor(new Color((int)Math.random()*255,(int)Math.random()*255,(int)Math.random()*255));
+			break;
 		case 49:
 			this.setGraphicsScale(this.getGraphicsScale()/2);
 			rebuildLightMap();
@@ -364,7 +485,7 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 			break;
 
 			case KeyEvent.VK_R:
-				scene.getLightmap().setShowRays(!scene.getLightmap().isShowRays());
+				scene.getLightmap().setShowRays(!scene.getLightmap().showingRays());
 				break;
 
 
@@ -417,11 +538,32 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 		// TODO Auto-generated method stub
 		
 	}
+	@Override
+	public void mouseWheelMoved(MouseWheelEvent e) {
+
+			if (e.getWheelRotation() < 0) {
+
+				this.setGraphicsScale(this.getGraphicsScale()*2);
+				rebuildLightMap();
+
+			} else {
+
+				this.setGraphicsScale(this.getGraphicsScale()/2);
+				rebuildLightMap();
+
+			}
+
+	}
+
 
 	@Override
 	public void mousePressed(MouseEvent arg0) {
 
-		dragging = true;
+		if(arg0.getButton() == 1)
+			dragging = true;
+		if(arg0.getButton() == 3) {
+			this.useThreads = !this.useThreads;
+		}
 
 	}
 
@@ -663,4 +805,62 @@ public class Window extends JComponent implements KeyListener, MouseListener{
 	public void setLastDrag(Point lastDrag) {
 		this.lastDrag = lastDrag;
 	}
+	
+	public boolean isDragging() {
+		return dragging;
+	}
+
+	public void setDragging(boolean dragging) {
+		this.dragging = dragging;
+	}
+
+	public boolean isThreadReady() {
+		return threadReady;
+	}
+
+	public void setThreadReady(boolean threadReady) {
+		this.threadReady = threadReady;
+	}
+
+	public boolean isUseThreads() {
+		return useThreads;
+	}
+
+	public void setUseThreads(boolean useThreads) {
+		this.useThreads = useThreads;
+	}
+	
+	public void p(String msg,boolean print) {
+		if(print)
+			System.out.println(msg);
+	}
+
+	public Threads.FPSCounter getFpsCounter() {
+		return fpsCounter;
+	}
+
+	public void setFpsCounter(Threads.FPSCounter fpsCounter) {
+		this.fpsCounter = fpsCounter;
+	}
+
+	public double getFps() {
+		return fps;
+	}
+
+	public boolean isThreadsDeployed() {
+		return threadsDeployed;
+	}
+
+	public void setThreadsDeployed(boolean threadsDeployed) {
+		this.threadsDeployed = threadsDeployed;
+	}
+
+	public Threads.LightmapThread[] getThreads() {
+		return threads;
+	}
+
+	public void setThreads(Threads.LightmapThread[] threads) {
+		this.threads = threads;
+	}
+
 }

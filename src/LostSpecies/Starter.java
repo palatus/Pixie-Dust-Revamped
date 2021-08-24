@@ -1,10 +1,7 @@
 package LostSpecies;
 
-import java.awt.Point;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Stack;
@@ -16,7 +13,6 @@ import engine.Music;
 import engine.Window;
 import engine.WorldObject;
 import light.Light;
-import light.ParticleSpawner;
 
 public class Starter {
 
@@ -40,7 +36,7 @@ public class Starter {
 	
 		window.setBackgroundURL("pbg.jpg");
 		addTestLights();
-		window.getLightmap().pushSunlight(window.getScreenSize());
+
 		//displayWalls();
 		
 		scanner.close();
@@ -71,7 +67,8 @@ public class Starter {
 		
 	}
 	
-	public static void generateMaze(String url) { // maze for final
+	// maze for final project fulfillment
+	public static void generateMaze(String url) { 
 
 		try {
 
@@ -108,14 +105,14 @@ public class Starter {
 						Light l2 = new Light();
 						l2.setX(x+16);
 						l2.setY(y+16);
-						l2.setRed(1f);
-						l2.setGreen(0.6f);
+						l2.setRed(0.51f);
+						l2.setGreen(0.8f);
 						l2.setBlue(0.4f);
 						l2.setDynamic(false);
-						l2.setDistance(256);
+						l2.setDistance(1024);
 						l2.setStrength(0.6f);
 						l2.setSaturation(1.0f);
-						l2.cycleB(0.08f, 100, 0.8f, 1.0f);
+						//l2.cycleB(0.08f, 100, 0.8f, 1.0f);
 						window.getLightmap().getLights().add(l2);
 						l2.setTag("EndStartLight");
 					}
@@ -228,7 +225,8 @@ public class Starter {
 		//l.TestFall();
 		
 		window.getLightmap().pushMouseLight();
-		
+		window.getLightmap().pushSunlight(window.getScreenSize());
+
 	}
 	
 	public static void loadSceneItems() {

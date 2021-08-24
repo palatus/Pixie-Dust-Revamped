@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="Pixie-Dust-Revamped-main:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Pixie_Dust_Revamped_main_jar</output-path>
+    <root id="archive" name="Pixie-Dust-Revamped-main.jar">
+      <element id="module-output" name="Pixie-Dust-Revamped-main" />
+    </root>
+  </artifact>
+</component>

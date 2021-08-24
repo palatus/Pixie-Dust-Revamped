@@ -11,8 +11,10 @@ import engine.GraphicalObject;
 
 public class Pixel extends PointSource{
 
-	private double sizeSquared = 4; // how many real pixels this 'pixel' represents
-	private boolean on = true; // Black, or lit
+	// how many real pixels this 'pixel' represents
+	private double sizeSquared = 4; 
+	// Black, or lit
+	private boolean on = true; 
 	private LightMap owner;
 	private Color renderColor;
 	private Color baseColor;
@@ -59,33 +61,40 @@ public class Pixel extends PointSource{
 		return false;
 		
 	}
-	
-	public boolean isObstructed(Light light, ArrayList<GraphicalObject> op, Graphics2D g) { // Do we mix the light onto the pixel, or not
 
-		if(light.isIgnoreObjects()) { // This light does not give a shit!
+	// Do we mix the light onto the pixel, or not
+	public boolean isObstructed(Light light, ArrayList<GraphicalObject> op, Graphics2D g) {
+
+		if(light.isIgnoreObjects()) {
 			return false;
 		}
-//		if(this.isOnShadowCaster(op)) {
-//			return false;
-//		}
+		if(this.isOnShadowCaster(op)) {
+			return true;
+		}
 		
 		Line2D l = new Line2D.Double(light.getLocation().getX(), light.getLocation().getY(), // "draw" line from the light source to the pixel
 				this.getRealLocation().getX()+(this.getWidth()*this.getSizeSquared())/2, this.getRealLocation().getY()+(this.getHeight()*this.getSizeSquared())/2);
 
-		boolean close = false;
 		for (int i = 0; i < op.size(); i++) {
 
-			Rectangle2D r = new Rectangle2D.Double(op.get(i).getX(), op.get(i).getY(), op.get(i).getEffectiveWidth(),op.get(i).getEffectiveHeight()); // object bounds
-			
+			if(!op.get(i).doesRender()){
+				continue;
+			}
+			// object bounds
+			Rectangle2D r = new Rectangle2D.Double(op.get(i).getX(), op.get(i).getY(), op.get(i).getEffectiveWidth(),op.get(i).getEffectiveHeight());
+
+			// pixel object bounds
 			Rectangle2D r2 = new Rectangle2D.Double(this.getRealLocation().getX(), this.getRealLocation().getY(),
-					this.getWidth()*this.getSizeSquared(), this.getHeight()*this.getSizeSquared()); // pixel object bounds
-			
-			if(r2.intersects(r)) { // if the pixel is over the object, then mix anyway
+					this.getWidth()*this.getSizeSquared(), this.getHeight()*this.getSizeSquared());
+
+			// if the pixel is intersects a GraphicalObject, then mix anyway
+			if(r2.intersects(r)) {
 				//op.get(i).setCastingShadow(false);
 				return false;
 			}
-			
-			if (l.intersects(r) && op.get(i).CastsShadows()) { // if the line from the light to the pixel is obstructed by a graphical object, then don't mix that light
+
+			// if the line from the light to the pixel is obstructed by a graphical object, then don't mix that light
+			if (l.intersects(r) && op.get(i).CastsShadows()) {
 				op.get(i).setCastingShadow(true);
 				return true;
 			}
@@ -93,7 +102,7 @@ public class Pixel extends PointSource{
 		}
 
 		// Quick, but ignores layer sorting
-		if(owner.isShowRays() && this.getRealLocation().distance(light.getLocation()) <= light.getDistance())
+		if(owner.showingRays() && this.getRealLocation().distance(light.getLocation()) <= light.getDistance())
 			g.draw(l);
 
 		// mix the light
@@ -130,15 +139,16 @@ public class Pixel extends PointSource{
 			
 			if(lights[i] != null) {
 
-				boolean obs = isObstructed(lights[i], sceneContents, g);
-				if (!iosc && obs && (!lights[i].getTag().equalsIgnoreCase("sun"))) {
-					continue;
-				}
-
 				double distance = this.getRealLocation().distance(lights[i].getLocation()); // distance from this to light
 				//g.fillRect(lights[i].getLocation().x, lights[i].getLocation().y, 32, 32);
 
-				if (distance <= lights[i].getDistance()) { // within distance & is in light path
+				// within distance
+				if (distance <= lights[i].getDistance()) {
+
+					boolean obs = isObstructed(lights[i], sceneContents, g);
+					if (!iosc && obs && (!lights[i].getTag().equalsIgnoreCase("sun"))) {
+						continue;
+					}
 
 					float alphaStage = (float) lights[i].getLightRatio(p)*lights[i].getStrength();
 
@@ -151,15 +161,17 @@ public class Pixel extends PointSource{
 						alphaStage = 0f;
 					}
 
-					if(iosc) {
-						alphaStage = lights[i].getSaturation();
-					} else if(lights[i].isDontMix() && !obs){
+					if(iosc || (lights[i].isDontMix() && !obs)) {
 						alphaStage = lights[i].getSaturation();
 					}
 
 					blended = Colors.blend(blended, lights[i].getRenderColor(p), alphaStage);
 					affected++;
 					totalStrength += lights[i].getStrength()*lights[i].getLightRatio(p);
+
+				} else {
+
+					continue;
 
 				}
 			}
@@ -177,10 +189,9 @@ public class Pixel extends PointSource{
 		blended = new Color(blended.getRed(), blended.getGreen(), blended.getBlue(), alphaStage);
 		
 		if(affected == 0) {
-			blended = new Color(0f,0f,0f,1f);
+			blended = Color.BLACK;
 		}
-		
-		
+
 		renderColor = blended;
 		
 	}
@@ -189,7 +200,8 @@ public class Pixel extends PointSource{
 		calculateColor(lights.toArray(new Light[lights.size()]), sceneContents ,g);
 	}
 	
-	public Point getRealLocation() { // need to calculate it's location when the camera moves
+	// need to calculate its location when the camera is offset
+	public Point getRealLocation() { 
 		
 		Point shifted = getLocation();
 		
@@ -197,7 +209,6 @@ public class Pixel extends PointSource{
 		int my = shifted.y + this.getOwner().getOwner().getShiftY();
 		
 		shifted = new Point(mx,my);
-		
 		
 		return shifted;
 		
@@ -211,7 +222,7 @@ public class Pixel extends PointSource{
 		this.sizeSquared = sizeSquared;
 	}
 
-	public boolean ison() {
+	public boolean isOn() {
 		return on;
 	}
 

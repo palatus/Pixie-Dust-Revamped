@@ -4,10 +4,12 @@
 Controls - 
 
     Click & Drag the mouse to move the camera
-    
-    '9' & '0' keys to change the light's strength (- & +)
 
-    '1' & '2' keys to change the Graphics Scale (- & +)
+    'F' & 'Right-Click' to toggle multithreading
+    
+    '9' & '0' keys to change the cursor's light strength (- & +)
+
+    '1' & '2' keys, or Mouse Scroll, to change the Zoom Scale (- & +)
     
     'Up Arrow' & 'Down Arrow' to change the lightmap resolution value.
     
