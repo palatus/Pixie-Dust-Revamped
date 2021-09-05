@@ -9,7 +9,6 @@ import java.util.Stack;
 import engine.Backpack;
 import engine.GraphicalObject;
 import engine.Item;
-import engine.Music;
 import engine.Window;
 import engine.WorldObject;
 import light.Light;
@@ -68,7 +67,7 @@ public class Starter {
 	}
 	
 	// maze for final project fulfillment
-	public static void generateMaze(String url) { 
+	public static void generateMaze(String url) {
 
 		try {
 

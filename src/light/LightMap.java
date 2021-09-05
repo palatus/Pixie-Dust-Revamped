@@ -2,7 +2,6 @@ package light;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Graphics2D;
 import java.awt.MouseInfo;
 import java.util.ArrayList;
 import java.util.Timer;
@@ -14,7 +13,7 @@ import java.awt.Point;
 
 public class LightMap {
 
-	private ArrayList<Pixel> litPixels = new ArrayList<Pixel>();
+	private ArrayList<Pixel> pixels = new ArrayList<Pixel>();
 	private ArrayList<Light> lights = new ArrayList<Light>();
 	private Window owner;
 	private float wallCoverage = 0.6f;
@@ -35,7 +34,7 @@ public class LightMap {
 	
 	public void recreate(Dimension di, double psize) { // method to return a standard LightMap based on 2 parameters.
 		
-		this.litPixels = new ArrayList<Pixel>();
+		this.pixels = new ArrayList<Pixel>();
 
 		double scale = psize; // size of each pixel
 		
@@ -48,7 +47,7 @@ public class LightMap {
 				Pixel p = new Pixel(new Point((int)(i*scale),(int)(j*scale)));
 				p.setSizeSquared(scale);
 				p.setOwner(this);
-				litPixels.add(p);
+				pixels.add(p);
 				
 			}
 			
@@ -80,7 +79,7 @@ public class LightMap {
 				Pixel p = new Pixel(new Point((int)(i*scale),(int)(j*scale)));
 				p.setSizeSquared(scale);
 				p.setOwner(l);
-				l.litPixels.add(p);
+				l.pixels.add(p);
 				
 			}
 			
@@ -197,24 +196,24 @@ public class LightMap {
 
 	public void loadPixels(ArrayList<Pixel> p) {
 		
-		this.setLitPixels(p);
+		this.setPixels(p);
 		
 	}
 	
 	public void loadPixels(Pixel[] p) {
 		
 		for(int i = 0; i<p.length; i++) {
-			litPixels.add(p[i]);
+			pixels.add(p[i]);
 		}
 		
 	}
 	
-	public ArrayList<Pixel> getLitPixels() {
-		return litPixels;
+	public ArrayList<Pixel> getPixels() {
+		return pixels;
 	}
 
-	public void setLitPixels(ArrayList<Pixel> litPixels) {
-		this.litPixels = litPixels;
+	public void setPixels(ArrayList<Pixel> litPixels) {
+		this.pixels = litPixels;
 	}
 
 	public ArrayList<Light> getLights() {
@@ -310,18 +309,6 @@ public class LightMap {
 		} catch (IndexOutOfBoundsException e) {
 			return false;
 		}
-
-	}
-
-	public Light getFirstLightWithTag(String tag){
-
-		for (Light l: this.getLights()) {
-			if(l.getTag().equalsIgnoreCase(tag)){
-				return l;
-			}
-		}
-
-		return null;
 
 	}
 

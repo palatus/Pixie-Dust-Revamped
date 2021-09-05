@@ -183,7 +183,7 @@ public class Light extends PointSource{
 		int r = (int) (c.getRed() * ratio);
 		int g = (int) (c.getGreen() * ratio);
 		int b = (int) (c.getBlue() * ratio);
-		
+
 		c = new Color(r,g,b, 255 - (int)(255*ratio));
 		
 		return c;
